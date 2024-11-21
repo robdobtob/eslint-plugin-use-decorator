@@ -298,6 +298,76 @@ class SomeClass {
 				}
 			]
 		},
+		  // should not apply validation because not extending the super class
+    {
+      code: `
+class SomeClass extends Mixins {
+	private somePrivateMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+	someMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+	async someAsyncMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+}
+`,
+      options: [
+        {
+          params: [],
+          methods: [
+            {
+              name: "assert",
+              public: true,
+							superClass: ["Vue"]
+            },
+          ],
+        },
+      ],
+    },
+		  // should apply validation because not extending the super class
+    {
+      code: `
+class SomeClass extends Mixins {
+	private somePrivateMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+	@assert
+	someMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+	@assert
+	async someAsyncMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+}
+`,
+      options: [
+        {
+          params: [],
+          methods: [
+            {
+              name: "assert",
+              public: true,
+							superClass: ["Mixins"]
+            },
+          ],
+        },
+      ],
+    },
 		{
 			code: `
 class SomeClass {
@@ -482,6 +552,58 @@ export default class SomeClass extends Mixins {}
 				},
 			],
 		},
+		  // should apply and fail validation because not extending the super class
+    {
+      code: `
+class SomeClass extends Mixins {
+	private somePrivateMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+	someMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+	async someAsyncMethod(
+		someParameter: number
+	): number {
+		return someParameter;
+	}
+}
+`,
+      options: [
+        {
+          params: [],
+          methods: [
+            {
+              name: "assert",
+              public: true,
+							superClass: ["Mixins"]
+            },
+          ],
+        },
+      ],
+			errors: [
+				{messageId: "method",
+					data: {
+						decorator: "assert",
+						types: "public, superClass"
+					},
+					line: 8,
+					column: 2
+				},
+				{messageId: "method",
+					data: {
+						decorator: "assert",
+						types: "public, superClass"
+					},
+					line: 13,
+					column: 2
+				}
+			]
+    },
 		{
 			code: `
 class SomeClass {

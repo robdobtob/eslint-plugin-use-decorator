@@ -9,11 +9,13 @@ const shouldCheckRule = node => item => {
 	const isPublic = item.public;
 	const isAsync = item.async;
 	const isStatic = item.static;
-	const solution = getSolution(isPrivate, isPublic, isAsync, isStatic);
+	const isSuperClass = item.superClass;
+	const solution = getSolution(isPrivate, isPublic, isAsync, isStatic, isSuperClass);
 	const test = Number(shouldCheckRulePrivate(node, isPrivate)) * binaryFactors.isPrivate
 		+ Number(shouldCheckRulePublic(node, isPublic)) * binaryFactors.isPublic
 		+ Number(shouldCheckRuleAsync(node, isAsync)) * binaryFactors.isAsync
-		+ Number(shouldCheckRuleStatic(node, isStatic)) * binaryFactors.isStatic;
+		+ Number(shouldCheckRuleStatic(node, isStatic)) * binaryFactors.isStatic
+		+ Number(shouldCheckRuleSuperClass(node, isSuperClass)) * binaryFactors.isSuperClass;
 	/* https://stackoverflow.com/a/21257341/3143953 */
 	return (test & solution) === solution;
 };
@@ -22,14 +24,16 @@ const binaryFactors = {
 	isPublic: 2,
 	isAsync: 4,
 	isStatic: 8,
+	isSuperClass: 16,
 };
 const defaultOption = {
 	isPrivate: false,
 	isPublic: false,
 	isAsync: false,
 	isStatic: false,
+	isSuperClass: true,
 };
-const getSolution = (isPrivate, isPublic, isAsync, isStatic) => {
+const getSolution = (isPrivate, isPublic, isAsync, isStatic, isSuperClass) => {
 	const privateFactor = (typeof isPrivate === "undefined"
 		? Number(defaultOption.isPrivate)
 		: Number(isPrivate)) * binaryFactors.isPrivate;
@@ -42,7 +46,8 @@ const getSolution = (isPrivate, isPublic, isAsync, isStatic) => {
 	const staticFactor = (typeof isStatic === "undefined"
 		? Number(defaultOption.isStatic)
 		: Number(isStatic)) * binaryFactors.isStatic;
-	return privateFactor + publicFactor + asyncFactor + staticFactor
+	const superClassFactor = (typeof isSuperClass === "undefined" ? Number(defaultOption.isSuperClass) :  1) * binaryFactors.isSuperClass;
+	return privateFactor + publicFactor + asyncFactor + staticFactor + superClassFactor;
 };
 const getName = item => item.name;
 const shouldCheckRuleStatic = (node, isStatic) => {
@@ -78,6 +83,19 @@ const shouldCheckRulePrivate = (node, isPrivate) => {
 	return (!isPrivate && (!node.hasOwnProperty("accessibility") || node.accessibility !== "private"))
 		|| (isPrivate && node.hasOwnProperty("accessibility") && node.accessibility === "private");
 };
+const shouldCheckRuleSuperClass = (node, isSuperClass) => {
+	if(typeof isSuperClass === "undefined"){
+		return defaultOption.isSuperClass
+	}
+	// find parent class
+	let parentClass = null;
+	if (node.type === 'ClassDeclaration'){
+		parentClass = node.superClass 
+	} else if (node.type === 'MethodDefinition' || node.type === 'PropertyDefinition'){
+		parentClass = node.parent.parent.superClass
+	}
+	return (Array.isArray(isSuperClass) && isSuperClass.length > 0 && (isSuperClass.includes(parentClass ? parentClass.name : ''))) || (Array.isArray(isSuperClass) && isSuperClass.length === 0)
+}
 const getMissingMethodDecoratorsSingle = (necessaryMethodDecorators, node) => {
 	if(node.decorators) {
 		for (const decorator of node.decorators) {
